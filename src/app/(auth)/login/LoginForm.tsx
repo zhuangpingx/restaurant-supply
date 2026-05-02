@@ -95,6 +95,12 @@ export default function LoginForm() {
             className={cn('w-full py-3.5 rounded-xl text-sm font-medium transition-all bg-gray-900 text-white disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]')}>
             {loading ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />发送中...</span> : '获取验证码'}
           </button>
+
+          {/* 测试模式提示 */}
+          <div className="text-center text-xs text-gray-400 pt-2 border-t border-gray-100">
+            <p>测试模式：输入手机号 <span className="font-mono text-gray-600">13800138000</span></p>
+            <p>验证码：<span className="font-mono text-gray-600">123456</span></p>
+          </div>
         </>
       ) : (
         <>
