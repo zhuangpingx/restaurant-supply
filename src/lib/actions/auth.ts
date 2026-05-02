@@ -46,10 +46,13 @@ export async function verifyOtp(phone: string, token: string): Promise<{ error?:
       })
       // 用户已存在也算成功，直接复用
       if (createError?.message?.includes('already been registered') || createError?.message?.includes('already exists')) {
-        // 重新查找已存在的用户
+        // 重新查找已存在的用户（先按手机号，再按邮箱）
         const { data: retryUsers } = await admin.auth.admin.listUsers({ perPage: 1000 })
         testUser = retryUsers.users.find(u => u.phone === `+86${phone}`)
-        if (!testUser) return { error: '测试用户查找失败' }
+        if (!testUser) {
+          testUser = retryUsers.users.find(u => u.email === testEmail)
+        }
+        if (!testUser) return { error: '测试用户查找失败: ' + createError.message }
       } else if (createError || !newUser.user) {
         return { error: '测试用户创建失败: ' + (createError?.message || '未知错误') }
       } else {
