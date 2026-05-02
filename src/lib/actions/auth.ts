@@ -1,88 +1,16 @@
 'use server'
 
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-// 测试账号
-const TEST_PHONE = '13800138000'
-const TEST_PASSWORD = '123456'
-
-export async function sendOtp(phone: string): Promise<{ error?: string }> {
-  // 测试模式：跳过真实短信发送
-  if (phone === TEST_PHONE) {
-    return {}
-  }
-
+export async function signIn(email: string, password: string): Promise<{ error?: string }> {
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithOtp({
-    phone: `+86${phone}`,
-  })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    if (error.message.includes('rate limit')) return { error: '发送太频繁，请稍后再试' }
-    return { error: '发送失败，请重试' }
-  }
-  return {}
-}
-
-export async function verifyOtp(phone: string, token: string): Promise<{ error?: string }> {
-  // 测试模式：使用密码登录
-  if (phone === TEST_PHONE && token === TEST_PASSWORD) {
-    const admin = createAdminClient()
-    const testEmail = `test_${phone}@demo.local`
-
-    // 查找或创建测试用户（带密码）
-    const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 })
-    let testUser = usersList.users.find(u => u.phone === `+86${phone}` || u.email === testEmail)
-
-    if (!testUser) {
-      const { data: newUser, error: createError } = await admin.auth.admin.createUser({
-        email: testEmail,
-        email_confirm: true,
-        password: TEST_PASSWORD,
-        user_metadata: { name: '测试管理员', phone: phone },
-      })
-      if (createError || !newUser.user) {
-        return { error: '测试用户创建失败: ' + (createError?.message || '未知错误') }
-      }
-      testUser = newUser.user
-    }
-
-    // 确保 users 表有记录
-    await admin.from('users').upsert({
-      id: testUser.id,
-      phone,
-      name: '测试管理员',
-      role: 'admin',
-      is_active: true,
-    }, { onConflict: 'id' })
-
-    // 用 signInWithPassword 建立正常 session
-    const supabase = await createClient()
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email: testEmail,
-      password: TEST_PASSWORD,
-    })
-
-    if (loginError) {
-      return { error: '登录失败: ' + loginError.message }
-    }
-
-    redirect('/dashboard')
-  }
-
-  const supabase = await createClient()
-
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone: `+86${phone}`,
-    token,
-    type: 'sms',
-  })
-
-  if (error) {
-    if (error.message.includes('expired')) return { error: '验证码已过期，请重新获取' }
-    return { error: '验证码错误，请重新输入' }
+    if (error.message.includes('Invalid login credentials')) return { error: '邮箱或密码错误' }
+    return { error: '登录失败: ' + error.message }
   }
 
   if (!data.user) return { error: '登录异常，请重试' }
