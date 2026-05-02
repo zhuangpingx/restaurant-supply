@@ -70,41 +70,34 @@ export async function verifyOtp(phone: string, token: string): Promise<{ error?:
     }, { onConflict: 'id' })
 
     // 测试模式：用 magic link 建立可靠 session
-    try {
-      const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: testUser.email || `test_${phone}@demo.local`,
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard`,
+      },
+    })
+
+    if (linkError || !linkData?.properties?.action_link) {
+      return { error: '测试登录失败: 无法生成验证链接' }
+    }
+
+    // 提取 OTP token 并通过 anon client 验证以建立 session
+    const match = linkData.properties.action_link.match(/otp=([^&]+)/)
+    if (match) {
+      const supabase = await createClient()
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        token: decodeURIComponent(match[1]),
         type: 'magiclink',
         email: testUser.email || `test_${phone}@demo.local`,
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard`,
-        },
       })
-
-      if (linkError || !linkData?.properties?.action_link) {
-        return { error: '测试登录失败: 无法生成验证链接' }
+      if (otpError) {
+        return { error: 'Session 建立失败: ' + otpError.message }
       }
-
-      // 提取 OTP token 并通过 anon client 验证以建立 session
-      const match = linkData.properties.action_link.match(/otp=([^&]+)/)
-      if (match) {
-        const supabase = await createClient()
-        const { error: otpError } = await supabase.auth.verifyOtp({
-          token: decodeURIComponent(match[1]),
-          type: 'magiclink',
-          email: testUser.email || `test_${phone}@demo.local`,
-        })
-        if (otpError) {
-          return { error: 'Session 建立失败: ' + otpError.message }
-        }
-      }
-
-      // Session 已建立，服务端直接 redirect 到 dashboard
-      redirect('/dashboard')
-    } catch (e: any) {
-      // NEXT_REDIRECT 是 redirect() 的正常行为，不要捕获
-      if (e?.message === 'NEXT_REDIRECT') throw e
-      return { error: '测试登录异常: ' + (e?.message || '未知') }
-      if (e?.message === 'NEXT_REDIRECT') throw e
     }
+
+    // Session 已建立，服务端直接 redirect 到 dashboard（不能在 try/catch 内）
+    redirect('/dashboard')
   }
 
   const supabase = await createClient()
