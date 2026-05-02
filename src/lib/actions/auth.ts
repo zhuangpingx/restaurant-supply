@@ -101,6 +101,7 @@ export async function verifyOtp(phone: string, token: string): Promise<{ error?:
       redirect('/dashboard')
     } catch (e: any) {
       return { error: '测试登录异常: ' + (e?.message || '未知') }
+      if (e?.message === 'NEXT_REDIRECT') throw e
     }
   }
 
