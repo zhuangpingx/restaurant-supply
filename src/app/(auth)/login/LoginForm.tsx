@@ -98,15 +98,15 @@ export default function LoginForm() {
 
           {/* 测试模式提示 */}
           <div className="text-center text-xs text-gray-400 pt-2 border-t border-gray-100">
-            <p>测试模式：输入手机号 <span className="font-mono text-gray-600">13800138000</span></p>
-            <p>验证码：<span className="font-mono text-gray-600">123456</span></p>
+            <p>测试账号：手机号 <span className="font-mono text-gray-600">13800138000</span></p>
+            <p>密码：<span className="font-mono text-gray-600">123456</span></p>
           </div>
         </>
       ) : (
         <>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">验证码</label>
+              <label className="text-sm font-medium text-gray-700">{phone === '13800138000' ? '密码' : '验证码'}</label>
               <span className="text-xs text-gray-400">已发送至 {phone.slice(0, 3)}****{phone.slice(7)}</span>
             </div>
             <div className="flex gap-2 justify-between" onPaste={handleOtpPaste}>

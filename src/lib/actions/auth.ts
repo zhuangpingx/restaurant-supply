@@ -3,9 +3,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-// 测试模式：使用此手机号可跳过短信验证码，直接输入任意6位数字登录
+// 测试账号
 const TEST_PHONE = '13800138000'
-const TEST_OTP = '123456'
+const TEST_PASSWORD = '123456'
 
 export async function sendOtp(phone: string): Promise<{ error?: string }> {
   // 测试模式：跳过真实短信发送
@@ -27,37 +27,26 @@ export async function sendOtp(phone: string): Promise<{ error?: string }> {
 }
 
 export async function verifyOtp(phone: string, token: string): Promise<{ error?: string }> {
-  // 测试模式验证
-  if (phone === TEST_PHONE && token === TEST_OTP) {
+  // 测试模式：使用密码登录
+  if (phone === TEST_PHONE && token === TEST_PASSWORD) {
     const admin = createAdminClient()
+    const testEmail = `test_${phone}@demo.local`
 
-    // 查找或创建测试用户
+    // 查找或创建测试用户（带密码）
     const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 })
-    let testUser = usersList.users.find(u => u.phone === `+86${phone}`)
+    let testUser = usersList.users.find(u => u.phone === `+86${phone}` || u.email === testEmail)
 
     if (!testUser) {
-      const testEmail = `test_${phone}@demo.local`
       const { data: newUser, error: createError } = await admin.auth.admin.createUser({
-        phone: `+86${phone}`,
-        phone_confirm: true,
-        user_metadata: { name: '测试管理员', phone: phone },
         email: testEmail,
         email_confirm: true,
+        password: TEST_PASSWORD,
+        user_metadata: { name: '测试管理员', phone: phone },
       })
-      // 用户已存在也算成功，直接复用
-      if (createError?.message?.includes('already been registered') || createError?.message?.includes('already exists')) {
-        // 重新查找已存在的用户（先按手机号，再按邮箱）
-        const { data: retryUsers } = await admin.auth.admin.listUsers({ perPage: 1000 })
-        testUser = retryUsers.users.find(u => u.phone === `+86${phone}`)
-        if (!testUser) {
-          testUser = retryUsers.users.find(u => u.email === testEmail)
-        }
-        if (!testUser) return { error: '测试用户查找失败: ' + createError.message }
-      } else if (createError || !newUser.user) {
+      if (createError || !newUser.user) {
         return { error: '测试用户创建失败: ' + (createError?.message || '未知错误') }
-      } else {
-        testUser = newUser.user
       }
+      testUser = newUser.user
     }
 
     // 确保 users 表有记录
@@ -69,34 +58,17 @@ export async function verifyOtp(phone: string, token: string): Promise<{ error?:
       is_active: true,
     }, { onConflict: 'id' })
 
-    // 测试模式：用 magic link 建立可靠 session
-    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: testUser.email || `test_${phone}@demo.local`,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard`,
-      },
+    // 用 signInWithPassword 建立正常 session
+    const supabase = await createClient()
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: testEmail,
+      password: TEST_PASSWORD,
     })
 
-    if (linkError || !linkData?.properties?.action_link) {
-      return { error: '测试登录失败: 无法生成验证链接' }
+    if (loginError) {
+      return { error: '登录失败: ' + loginError.message }
     }
 
-    // 提取 OTP token 并通过 anon client 验证以建立 session
-    const match = linkData.properties.action_link.match(/otp=([^&]+)/)
-    if (match) {
-      const supabase = await createClient()
-      const { error: otpError } = await supabase.auth.verifyOtp({
-        token: decodeURIComponent(match[1]),
-        type: 'magiclink',
-        email: testUser.email || `test_${phone}@demo.local`,
-      })
-      if (otpError) {
-        return { error: 'Session 建立失败: ' + otpError.message }
-      }
-    }
-
-    // Session 已建立，服务端直接 redirect 到 dashboard（不能在 try/catch 内）
     redirect('/dashboard')
   }
 
