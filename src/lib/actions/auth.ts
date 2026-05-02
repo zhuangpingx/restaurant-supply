@@ -36,25 +36,35 @@ export async function verifyOtp(phone: string, token: string): Promise<{ error?:
     let testUser = usersList.users.find(u => u.phone === `+86${phone}`)
 
     if (!testUser) {
+      const testEmail = `test_${phone}@demo.local`
       const { data: newUser, error: createError } = await admin.auth.admin.createUser({
         phone: `+86${phone}`,
         phone_confirm: true,
         user_metadata: { name: '测试管理员', phone: phone },
-        email: `test_${phone}@demo.local`,
+        email: testEmail,
         email_confirm: true,
       })
-      if (createError || !newUser.user) return { error: '测试用户创建失败: ' + (createError?.message || '未知错误') }
-      testUser = newUser.user
-
-      // 确保 users 表有记录
-      await admin.from('users').upsert({
-        id: testUser.id,
-        phone,
-        name: '测试管理员',
-        role: 'admin',
-        is_active: true,
-      }, { onConflict: 'id' })
+      // 用户已存在也算成功，直接复用
+      if (createError?.message?.includes('already been registered') || createError?.message?.includes('already exists')) {
+        // 重新查找已存在的用户
+        const { data: retryUsers } = await admin.auth.admin.listUsers({ perPage: 1000 })
+        testUser = retryUsers.users.find(u => u.phone === `+86${phone}`)
+        if (!testUser) return { error: '测试用户查找失败' }
+      } else if (createError || !newUser.user) {
+        return { error: '测试用户创建失败: ' + (createError?.message || '未知错误') }
+      } else {
+        testUser = newUser.user
+      }
     }
+
+    // 确保 users 表有记录
+    await admin.from('users').upsert({
+      id: testUser.id,
+      phone,
+      name: '测试管理员',
+      role: 'admin',
+      is_active: true,
+    }, { onConflict: 'id' })
 
     // 用 admin API 生成 magic link（实际是生成一个可用的 OTP token）
     // 更好的方式：直接通过 anon client 使用 signInWithOTP 的 token
