@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root { --radius: 0.5rem; }
+}
+
+.safe-area-pb {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+* { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+input, textarea, select { -webkit-appearance: none; }
