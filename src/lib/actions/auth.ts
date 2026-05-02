@@ -97,8 +97,8 @@ export async function verifyOtp(phone: string, token: string): Promise<{ error?:
         }
       }
 
-      // Session 已建立，返回成功（客户端会 router.push 到 /dashboard）
-      return {}
+      // Session 已建立，服务端直接 redirect 到 dashboard
+      redirect('/dashboard')
     } catch (e: any) {
       return { error: '测试登录异常: ' + (e?.message || '未知') }
     }
