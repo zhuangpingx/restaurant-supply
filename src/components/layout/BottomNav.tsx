@@ -1,16 +1,17 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Truck, CreditCard, Store, Users } from 'lucide-react'
+import { LayoutDashboard, Truck, CreditCard, Store, Users, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types'
 
 const navItems = [
-  { href: '/dashboard', label: '首页', icon: LayoutDashboard, roles: ['boss','store_manager','supplier','finance'] },
-  { href: '/deliveries', label: '送货单', icon: Truck, roles: ['boss','store_manager','supplier','finance'] },
-  { href: '/payments', label: '付款', icon: CreditCard, roles: ['boss','store_manager','supplier','finance'] },
-  { href: '/stores', label: '门店', icon: Store, roles: ['boss','finance'] },
-  { href: '/suppliers', label: '供应商', icon: Users, roles: ['boss','finance'] },
+  { href: '/dashboard',    label: '首页',   icon: LayoutDashboard, roles: ['boss','store_manager','supplier','finance'] },
+  { href: '/deliveries',   label: '送货单', icon: Truck,           roles: ['boss','store_manager','supplier','finance'] },
+  { href: '/payments',     label: '付款',   icon: CreditCard,      roles: ['boss','store_manager','supplier','finance'] },
+  { href: '/stores',       label: '门店',   icon: Store,           roles: ['boss','finance'] },
+  { href: '/suppliers',    label: '供应商', icon: Users,           roles: ['boss','finance'] },
+  { href: '/admin/users',  label: '账号',   icon: Settings,        roles: ['boss'] },
 ]
 
 export default function BottomNav({ role }: { role: UserRole }) {
@@ -22,7 +23,9 @@ export default function BottomNav({ role }: { role: UserRole }) {
         const Icon = item.icon
         const isActive = pathname.startsWith(item.href)
         return (
-          <Link key={item.href} href={item.href} className={cn('flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors min-w-[52px]', isActive ? 'text-gray-900' : 'text-gray-400')}>
+          <Link key={item.href} href={item.href}
+            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-colors min-w-[44px]',
+              isActive ? 'text-gray-900' : 'text-gray-400')}>
             <Icon className={cn('w-5 h-5', isActive && 'stroke-[2.5px]')} />
             <span className="text-[10px] font-medium">{item.label}</span>
           </Link>

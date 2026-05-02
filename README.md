@@ -53,12 +53,8 @@ npm run dev
 
 ## 技术栈
 
-- Next.js 16 (App Router)
+- Next.js 15 (App Router)
 - TypeScript
 - TailwindCSS + shadcn/ui
 - Supabase (数据库 + 认证 + 存储)
 - Vercel (部署)
-
----
-
-**最后更新：** 2026-05-02
