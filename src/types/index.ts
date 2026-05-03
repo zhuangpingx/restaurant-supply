@@ -1,4 +1,4 @@
-export type UserRole = 'boss' | 'store_manager' | 'supplier' | 'finance'
+export type UserRole = 'boss' | 'store_manager' | 'supplier' | 'finance' | 'receiver'
 export type DeliveryStatus = 'pending' | 'confirmed' | 'rejected' | 'paid'
 export type PaymentStatus = 'pending' | 'overdue' | 'paid'
 export type NotificationType =

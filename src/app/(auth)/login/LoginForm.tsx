@@ -94,6 +94,7 @@ export default function LoginForm() {
           ['manager@test.com', '店长'],
           ['supplier@test.com', '供应商'],
           ['finance@test.com', '财务'],
+          ['receiver@test.com', '收货员'],
         ].map(([e, role]) => (
           <button
             key={e}

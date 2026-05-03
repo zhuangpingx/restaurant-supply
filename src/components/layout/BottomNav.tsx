@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types'
 
 const navItems = [
-  { href: '/dashboard',    label: '首页',   icon: LayoutDashboard, roles: ['boss','store_manager','supplier','finance'] },
-  { href: '/deliveries',   label: '送货单', icon: Truck,           roles: ['boss','store_manager','supplier','finance'] },
+  { href: '/dashboard',    label: '首页',   icon: LayoutDashboard, roles: ['boss','store_manager','supplier','finance','receiver'] },
+  { href: '/deliveries',   label: '送货单', icon: Truck,           roles: ['boss','store_manager','supplier','finance','receiver'] },
   { href: '/payments',     label: '付款',   icon: CreditCard,      roles: ['boss','store_manager','supplier','finance'] },
   { href: '/stores',       label: '门店',   icon: Store,           roles: ['boss','finance'] },
   { href: '/suppliers',    label: '供应商', icon: Users,           roles: ['boss','finance'] },
