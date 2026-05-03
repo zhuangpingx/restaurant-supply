@@ -150,3 +150,24 @@ export async function getStoresAndSuppliers() {
   ])
   return { stores: stores ?? [], suppliers: suppliers ?? [] }
 }
+
+// 绑定收货员到门店（可多个门店）
+export async function bindReceiverToStore(
+  userId: string,
+  storeId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: '未登录' }
+  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'boss') return { error: '无权限' }
+
+  // 收货员可以绑定多个门店，用 upsert
+  const { error } = await supabase
+    .from('store_receivers')
+    .upsert({ user_id: userId, store_id: storeId, is_active: true })
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/users')
+  return {}
+}

@@ -3,20 +3,43 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+// 收货员获取自己门店（通过 store_receivers 表或直接查 stores）
+async function getReceiverStoreId(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data } = await supabase
+    .from('store_receivers')
+    .select('store_id')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+  return data?.map(r => r.store_id) ?? []
+}
+
 export async function confirmDelivery(deliveryId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: '未登录' }
 
-  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!profile || !['store_manager', 'boss'].includes(profile.role)) return { error: '无权限操作' }
+  const { data: profile } = await supabase
+    .from('users').select('role, name').eq('id', user.id).single()
+
+  if (!profile || !['store_manager', 'boss', 'receiver'].includes(profile.role)) {
+    return { error: '无权限操作' }
+  }
 
   const { data: delivery } = await supabase
     .from('deliveries')
     .select('*, supplier:suppliers(name,user_id), store:stores(name)')
     .eq('id', deliveryId).single()
+
   if (!delivery) return { error: '送货单不存在' }
   if (delivery.status !== 'pending') return { error: '当前状态不可确认' }
+
+  // 收货员权限验证：只能确认自己门店的
+  if (profile.role === 'receiver') {
+    const storeIds = await getReceiverStoreId(supabase, user.id)
+    if (!storeIds.includes(delivery.store_id)) {
+      return { error: '无权限操作此门店的送货单' }
+    }
+  }
 
   const now = new Date().toISOString()
   const { error } = await supabase.from('deliveries')
@@ -36,7 +59,8 @@ export async function confirmDelivery(deliveryId: string): Promise<{ error?: str
   }
 
   // 通知财务
-  const { data: targets } = await supabase.from('users').select('id').in('role', ['finance', 'boss']).eq('is_active', true)
+  const { data: targets } = await supabase.from('users')
+    .select('id').in('role', ['finance', 'boss']).eq('is_active', true)
   if (targets?.length) {
     await supabase.from('notifications').insert(
       targets.map(u => ({
@@ -60,15 +84,28 @@ export async function rejectDelivery(deliveryId: string, reason: string): Promis
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: '未登录' }
 
-  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!profile || !['store_manager', 'boss'].includes(profile.role)) return { error: '无权限操作' }
+  const { data: profile } = await supabase
+    .from('users').select('role').eq('id', user.id).single()
+
+  if (!profile || !['store_manager', 'boss', 'receiver'].includes(profile.role)) {
+    return { error: '无权限操作' }
+  }
 
   const { data: delivery } = await supabase
     .from('deliveries')
     .select('*, supplier:suppliers(name,user_id), store:stores(name)')
     .eq('id', deliveryId).single()
+
   if (!delivery) return { error: '送货单不存在' }
   if (delivery.status !== 'pending') return { error: '当前状态不可驳回' }
+
+  // 收货员权限验证
+  if (profile.role === 'receiver') {
+    const storeIds = await getReceiverStoreId(supabase, user.id)
+    if (!storeIds.includes(delivery.store_id)) {
+      return { error: '无权限操作此门店的送货单' }
+    }
+  }
 
   const { error } = await supabase.from('deliveries')
     .update({ status: 'rejected', rejection_reason: reason, confirmed_by: user.id, confirmed_at: new Date().toISOString() })
@@ -101,13 +138,18 @@ export async function confirmWithEdits(deliveryId: string, updatedItems: UpdateI
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: '未登录' }
 
-  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!profile || !['store_manager', 'boss'].includes(profile.role)) return { error: '无权限操作' }
+  const { data: profile } = await supabase
+    .from('users').select('role').eq('id', user.id).single()
+
+  if (!profile || !['store_manager', 'boss', 'receiver'].includes(profile.role)) {
+    return { error: '无权限操作' }
+  }
 
   const { data: delivery } = await supabase
     .from('deliveries')
     .select('*, supplier:suppliers(name,user_id), store:stores(name)')
     .eq('id', deliveryId).single()
+
   if (!delivery) return { error: '送货单不存在' }
   if (delivery.status !== 'pending') return { error: '当前状态不可修改' }
 
@@ -124,7 +166,8 @@ export async function confirmWithEdits(deliveryId: string, updatedItems: UpdateI
     }).eq('id', item.id)
   }
 
-  const { data: allItems } = await supabase.from('delivery_items').select('amount').eq('delivery_id', deliveryId)
+  const { data: allItems } = await supabase
+    .from('delivery_items').select('amount').eq('delivery_id', deliveryId)
   const newTotal = (allItems ?? []).reduce((sum, i) => sum + Number(i.amount), 0)
 
   const { error } = await supabase.from('deliveries')

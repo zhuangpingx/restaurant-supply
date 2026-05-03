@@ -35,19 +35,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 收货员角色权限控制：只能访问 /dashboard 和 /deliveries
-  if (user) {
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
-    if (profile?.role === 'receiver') {
-      const allowedPaths = ['/dashboard', '/deliveries']
-      const isAllowed = allowedPaths.some(p => request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + '/') || request.nextUrl.pathname.startsWith(p + '?'))
-      if (!isAllowed) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        return NextResponse.redirect(url)
-      }
-    }
-  }
-
   return supabaseResponse
 }

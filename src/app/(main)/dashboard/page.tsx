@@ -14,7 +14,6 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
   const isFinanceOrBoss = ['finance', 'boss'].includes(profile?.role ?? '')
-  const isReceiver = profile?.role === 'receiver'
 
   const [stats, { data: recentDeliveries }] = await Promise.all([
     isFinanceOrBoss ? getDashboardStats() : Promise.resolve(null),
@@ -53,18 +52,6 @@ export default async function DashboardPage() {
             <StatCard label="超60天" value={formatAmount(stats.severeOverdueAmount)} sub={`${stats.severeOverdueCount} 笔`} href="/payments?tab=pending" danger={stats.severeOverdueAmount > 0} severe />
           </div>
         </div>
-      )}
-
-      {isReceiver && (
-        <Link href="/deliveries">
-          <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-between active:opacity-80">
-            <div>
-              <p className="text-white font-semibold text-sm">查看送货单</p>
-              <p className="text-gray-400 text-xs mt-0.5">收货确认与验收</p>
-            </div>
-            <ArrowRight className="w-5 h-5 text-gray-400" />
-          </div>
-        </Link>
       )}
 
       {profile?.role === 'supplier' && (
