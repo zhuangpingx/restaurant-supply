@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 系统字体，无需加载外部字体 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "微软雅黑", "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  :root { --radius: 0.5rem; }
+}
+
+.safe-area-pb {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+* { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+input, textarea, select { -webkit-appearance: none; }
